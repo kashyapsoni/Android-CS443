@@ -13,6 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+//Kashyap Soni. 09/22/2017
+//Android application for converting temperature
+//either from Fahrenheit (°F) to Celsius (°C)
+//or from Celsius (°C) to Fahrenheit (°F)
+
 package com.example.android.fragments;
 
 import android.support.v4.app.Fragment;
