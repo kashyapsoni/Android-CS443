@@ -1,0 +1,232 @@
+package edu.umb.cs443.hw2;
+
+
+//Kashyap Soni. 10/23/2017
+//Android board game with a “player” and “treasures”
+
+import android.app.Activity;
+import android.app.Notification;
+import android.os.AsyncTask;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.GridView;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import java.util.Random;
+
+
+public class MainActivity extends Activity {
+
+    GridView gridView;
+
+    private static int w = 5, curx, cury;
+
+    private static int GameX;
+
+    private static int positionO;
+
+    private Random r = new Random();
+
+    private Thread MoveOThread;
+
+    private Thread CreateXThread;
+
+    static String[] numbers = new String[w * w];
+
+    private Handler GameHandler = new Handler();
+
+    private static int cells;
+
+    private static int treasure;
+
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        GameX = 1;
+        setContentView(R.layout.activity_main);
+
+        gridView = (GridView) findViewById(R.id.gridView1);
+        cury = r.nextInt(w);
+        cury = r.nextInt(w);
+        positionO = cury * w + curx;
+        numbers[positionO] = "O";
+
+        final ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                R.layout.list_item, numbers);
+        gridView.setAdapter(adapter);
+        CreateXThread();
+
+        GameHandler = new Handler() {
+
+            public void handleMessage(Message msg) {
+                TextView cellsview =(TextView)findViewById(R.id.textCell);
+                cellsview.setText(cells + "Cells");
+                TextView treasureview=(TextView)findViewById(R.id.textTreasure);
+                treasureview.setText(treasure + "Treasure");
+
+                ((ArrayAdapter) gridView.getAdapter()).notifyDataSetChanged();
+            }
+
+        };
+
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v,
+                                    int position, long id) {
+                Toast.makeText(getApplicationContext(),
+                        (CharSequence) (new Integer(position).toString()),
+                        Toast.LENGTH_SHORT).show();
+                try {
+                    MoveO(position);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+            }
+        });
+
+        init();
+    }
+
+    public void CreateXThread() {
+        if (CreateXThread == null || !CreateXThread.isAlive()) {
+            final Runnable CreateX = new Runnable() {
+                @Override
+                public void run() {
+                    synchronized (this) {
+                        final int delayX = 2000;
+                        int x;
+                        int y;
+                        try {
+                            while (GameX <= 4) {
+                                Thread.sleep(delayX);
+                                x = r.nextInt(w);
+                                y = r.nextInt(w);
+                                if (!(numbers[y * w + x].equals("X")) && (!(numbers[y * w + x].equals("O")))) {
+                                    numbers[y * w + x] = "X";
+                                    GameHandler.sendEmptyMessage(0);
+                                    GameX++;
+                                } else
+                                    break;
+                            }
+
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            };
+            CreateXThread = new Thread(CreateX);
+            CreateXThread.start();
+        }
+    }
+
+    public void MoveO(final int position) throws InterruptedException {
+        final Runnable Mover = new  Runnable() {
+            @Override
+            public void run() {
+                int positionX = position % 5;
+                int positionY = position / 5;
+                while (cury != positionY) {
+                    if (cury < positionY) {
+                        numbers[cury * w + curx] = "";
+                        GameHandler.sendEmptyMessage(0);
+                        cury++;
+                        cells++;
+                        if (numbers[cury * w + curx] == "X") {
+                            GameX--;
+                            treasure++;
+                            CreateXThread(); }
+                        numbers[cury * w + curx] = "O";
+                        GameHandler.sendEmptyMessage(0);
+                    } else if (cury > positionY) {
+                        numbers[cury * w + curx] = "";
+                        GameHandler.sendEmptyMessage(0);
+                        cury--;
+                        cells++;
+                        if (numbers[cury * w + curx] == "X") {
+                            GameX--;
+                            treasure++;
+                            CreateXThread();
+                        }
+                        numbers[cury * w + curx] = "O";
+                        GameHandler.sendEmptyMessage(0);
+                    }
+                    //MoveOThread.interrupt();
+                    try {
+                        Thread.sleep(600);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                while (curx != positionX) {
+                    if (curx < positionX) {
+                        numbers[cury * w + curx] = "";
+                        GameHandler.sendEmptyMessage(0);
+                        curx++;
+                        cells++;
+                        if (numbers[cury * w + curx] == "X") {
+                            GameX--;
+                            treasure++;
+                            CreateXThread();
+                        }
+                        numbers[cury * w + curx] = "O";
+                        GameHandler.sendEmptyMessage(0);
+                    } else if (curx > positionX) {
+                        numbers[cury * w + curx] = "";
+                        GameHandler.sendEmptyMessage(0);
+                        curx--;
+                        cells++;
+                        if(numbers[cury * w + curx] == "X") {
+                            GameX--;
+                            treasure++;
+                            CreateXThread();
+                        }
+                        numbers[cury * w + curx] = "O";
+                        GameHandler.sendEmptyMessage(0);
+                    }
+                    try {
+                        Thread.sleep(600);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        };
+
+        MoveOThread = new Thread(Mover);
+        MoveOThread.start();
+
+    }
+
+    public void reset(View view) {
+        init();
+    }
+
+    void init(){
+        for (int i = 0; i < numbers.length; i++) numbers[i] = "";
+        curx = r.nextInt(w);
+        cury = r.nextInt(w);
+        positionO = cury * w + curx;
+        numbers[positionO] = "O";
+        ((ArrayAdapter) gridView.getAdapter()).notifyDataSetChanged();
+        GameX = 1;
+        CreateXThread();
+    }
+
+    public void decreaseGameX (int GameX) {
+        GameX = GameX;
+    }
+
+    public void exitThisApp(View view) {
+        finish();
+        System.exit(0);
+    }
+}
